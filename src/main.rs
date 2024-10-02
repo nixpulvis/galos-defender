@@ -115,32 +115,48 @@ fn query(
     }
 }
 
-fn expand(mut ev_r: EventReader<Expand>, mut target_system_query: Query<&mut Factions>) {
+fn expand(
+    mut ev_r: EventReader<Expand>,
+    mut target_system_query: Query<(Entity, &Name, Option<&mut Factions>)>,
+    mut commands: Commands,
+) {
     for event in ev_r.read() {
         println!("Processing Expand event");
-        // TODO: Handle creating a new Factions when it doesn't exist.
-        let Ok(mut faction_list) = target_system_query.get_mut(event.system) else {
+        let Ok((entity, name, faction_list)) = target_system_query.get_mut(event.system) else {
             continue;
         };
-        faction_list.0.push(event.faction);
+        if let Some(mut fl) = faction_list {
+            println!("pushing {}", &name.0);
+            fl.0.push(event.faction);
+        } else {
+            println!("inserting {}", &name.0);
+            commands
+                .entity(entity)
+                .insert(Factions(vec![event.faction]));
+        }
     }
 }
 
 fn check_expansion(
     mut ev_w: EventWriter<Expand>,
-    system_query: Query<(Entity, &Name, &Position, &Factions), With<System>>,
+    system_query: Query<(Entity, &Name, &Position, Option<&Factions>), With<System>>,
 ) {
     // do some additional queries on the entity lists to determine which factions should
     // expand, and where. in this example, all factions expand to all neighbors
     for (system_a, name_a, position_a, factions_a) in &system_query {
         for (system_b, name_b, position_b, factions_b) in &system_query {
+            if system_a == system_b {
+                continue;
+            }
             if position_a.0.distance(position_b.0) < 20. {
-                for faction in factions_a.0.clone() {
-                    println!("Sending Expand event");
-                    ev_w.send(Expand {
-                        faction,
-                        system: system_b,
-                    });
+                if let Some(factions_a) = factions_a {
+                    for faction in factions_a.0.clone() {
+                        println!("Sending Expand event from {} to {}", name_a.0, name_b.0);
+                        ev_w.send(Expand {
+                            faction,
+                            system: system_b,
+                        });
+                    }
                 }
             }
         }
