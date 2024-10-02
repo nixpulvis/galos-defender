@@ -1,12 +1,11 @@
 use bevy::{prelude::*, utils::dbg};
+use std::collections::{hash_set, HashSet};
 
 fn main() {
     let mut app = App::new()
-        // .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins)
         .add_systems(Startup, spawn)
-        .add_systems(Update, query.after(expand))
-        .add_systems(Update, check_expansion)
-        .add_systems(Update, expand.after(check_expansion))
+        .add_systems(Update, (check_expansion, expand, query).chain())
         .add_event::<Expand>()
         .run();
 }
@@ -21,13 +20,13 @@ struct System;
 struct Name(String);
 
 #[derive(Component, Debug)]
-struct Neighbors(Vec<Entity>);
+struct Neighbors(HashSet<Entity>);
 
 #[derive(Component, Debug)]
-struct Systems(Vec<Entity>);
+struct Systems(HashSet<Entity>);
 
 #[derive(Component, Debug)]
-struct Factions(Vec<Entity>);
+struct Factions(HashSet<Entity>);
 
 #[derive(Component, Debug)]
 struct Address(u32);
@@ -71,7 +70,7 @@ fn spawn(mut commands: Commands) {
                 name: Name("SOL".into()),
                 position: Position(Vec3::splat(0.)),
             },
-            Factions(vec![faction_a]),
+            Factions(HashSet::from([faction_a])),
         ))
         .id();
 
@@ -94,7 +93,7 @@ fn spawn(mut commands: Commands) {
         .id();
 
     commands.get_entity(faction_a).map(|mut cmds| {
-        cmds.insert(Systems(vec![system_a]));
+        cmds.insert(Systems(HashSet::from([system_a])));
     });
 }
 
@@ -122,7 +121,7 @@ fn expand(mut ev_r: EventReader<Expand>, mut target_system_query: Query<&mut Fac
         let Ok(mut faction_list) = target_system_query.get_mut(event.system) else {
             continue;
         };
-        faction_list.0.push(event.faction);
+        faction_list.0.insert(event.faction);
     }
 }
 
