@@ -1,13 +1,14 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::dbg};
 
 fn main() {
-    let mut app = App::new();
-    app.add_systems(Startup, spawn);
-    app.add_systems(Update, query);
-    app.add_systems(Update, check_expansion);
-    app.add_systems(Update, expand);
-    app.add_event::<Expand>();
-    app.run();
+    let mut app = App::new()
+        // .add_plugins(DefaultPlugins)
+        .add_systems(Startup, spawn)
+        .add_systems(Update, query)
+        .add_systems(Update, check_expansion)
+        .add_systems(Update, expand)
+        .add_event::<Expand>()
+        .run();
 }
 
 #[derive(Component, Debug)]
@@ -89,9 +90,12 @@ fn spawn(mut commands: Commands) {
 
 fn query(systems: Query<(&Name, &Factions), With<System>>, factions: Query<&Name, With<Faction>>) {
     for (system_name, system_factions) in &systems {
+        dbg!(system_name);
         for faction in &system_factions.0 {
-            let faction_name = factions.get(*faction);
-            dbg!(system_name, faction_name);
+            let Ok(faction_name) = factions.get(*faction) else {
+                continue;
+            };
+            dbg!(faction_name);
         }
     }
 }
