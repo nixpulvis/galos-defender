@@ -6,6 +6,9 @@ use crate::{
 use bevy::prelude::*;
 use std::collections::HashSet;
 
+pub(crate) const EXPANSION_INFLUENCE: f32 = 0.15;
+pub(crate) const EXPANSION_INFLUENCE_THRESHOLD: f32 = 0.75;
+
 #[derive(Event)]
 pub(crate) struct Expand {
     faction: Entity,
@@ -42,7 +45,7 @@ pub(crate) fn expand(
         let new_sys_faction = SystemFaction {
             system: event.system,
             faction: event.faction,
-            influence: 25.,
+            influence: EXPANSION_INFLUENCE,
             state: None,
         };
         let all_system_factions = system_factions.iter().collect::<HashSet<&SystemFaction>>();
@@ -61,7 +64,7 @@ pub(crate) fn check_expansion(
     system_factions: Query<&SystemFaction>,
 ) {
     for system_faction in &system_factions {
-        if system_faction.influence >= 0.75 {
+        if system_faction.influence >= EXPANSION_INFLUENCE_THRESHOLD {
             let (src_system_id, src_system, src_position) =
                 systems.get(system_faction.system).expect("missing system");
             let faction = factions
