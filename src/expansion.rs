@@ -11,6 +11,14 @@ pub(crate) struct Expand {
     system: Entity,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct Expansion;
+
+pub(crate) fn plugin(app: &mut App) {
+    app.add_event::<Expand>();
+    app.add_systems(Update, (check_expansion, expand).chain().in_set(Expansion));
+}
+
 pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
     systems: Query<&System>,
@@ -52,7 +60,7 @@ pub(crate) fn check_expansion(
     system_factions: Query<&SystemFaction>,
 ) {
     for system_faction in &system_factions {
-        if system_faction.influence >= 75. {
+        if system_faction.influence >= 0.75 {
             let (src_system_id, src_system, src_position) =
                 systems.get(system_faction.system).expect("missing system");
             let faction = factions
@@ -78,6 +86,9 @@ pub(crate) fn check_expansion(
                         system: dst_system_id,
                         faction: system_faction.faction,
                     });
+
+                    // TODO: Only expand to the closest system.
+                    break;
                 }
             }
         }
