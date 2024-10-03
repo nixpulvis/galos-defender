@@ -4,6 +4,7 @@ use crate::{
     Faction,
 };
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 #[derive(Event)]
 pub(crate) struct Expand {
@@ -44,7 +45,7 @@ pub(crate) fn expand(
             influence: 25.,
             state: None,
         };
-        let all_system_factions = system_factions.iter().collect::<Vec<&SystemFaction>>();
+        let all_system_factions = system_factions.iter().collect::<HashSet<&SystemFaction>>();
         if all_system_factions.contains(&&new_sys_faction) {
             return;
         }
