@@ -1,17 +1,14 @@
-use std::collections::HashSet;
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 mod faction;
-use self::faction::*;
+use faction::*;
 
 mod system;
-use self::system::{*, System};
+use system::{System, *};
 
 mod expansion;
-use self::expansion::*;
-
-#[derive(Component, Debug)]
-struct Name(String);
+use expansion::*;
 
 fn main() {
     App::new()
@@ -27,40 +24,40 @@ fn main() {
 
 fn spawn(mut commands: Commands) {
     let faction_a = commands
-        .spawn((FactionBundle {
-            faction: Faction,
-            name: Name("Our Faction".into()),
+        .spawn((Faction {
+            name: "Our Faction".into(),
         },))
         .id();
 
     let system_a = commands
         .spawn((
-            SystemBundle {
-                system: System,
-                address: Address(0),
-                name: Name("SOL".into()),
-                position: Position(Vec3::splat(0.)),
+            System {
+                address: 0,
+                name: "SOL".into(),
             },
+            Position(Vec3::splat(0.)),
             Factions(HashSet::from([faction_a])),
         ))
         .id();
 
     let neighbor = commands
-        .spawn((SystemBundle {
-            system: System,
-            address: Address(1),
-            name: Name("ALPHA CENTAURI".into()),
-            position: Position(Vec3::new(3.03125, -0.09375, 3.15625)),
-        },))
+        .spawn((
+            System {
+                address: 1,
+                name: "ALPHA CENTAURI".into(),
+            },
+            Position(Vec3::new(3.03125, -0.09375, 3.15625)),
+        ))
         .id();
 
     let not_neighbor = commands
-        .spawn((SystemBundle {
-            system: System,
-            address: Address(2),
-            name: Name("G 139-21".into()),
-            position: Position(Vec3::new(-17.03125, 16.875, 34.625)),
-        },))
+        .spawn((
+            System {
+                address: 2,
+                name: "G 139-21".into(),
+            },
+            Position(Vec3::new(-17.03125, 16.875, 34.625)),
+        ))
         .id();
 
     commands.get_entity(faction_a).map(|mut cmds| {
@@ -68,18 +65,16 @@ fn spawn(mut commands: Commands) {
     });
 }
 
-fn query(
-    systems: Query<(&Name, Option<&Factions>), With<System>>,
-    factions: Query<&Name, With<Faction>>,
-) {
-    for (system_name, system_factions) in &systems {
-        dbg!(system_name);
+fn query(systems: Query<(&System, Option<&Factions>)>, factions: Query<&Faction>) {
+    for (system, system_factions) in &systems {
+        dbg!(system);
         if let Some(sf) = system_factions {
-            for faction in &sf.0 {
-                let Ok(faction_name) = factions.get(*faction) else {
+            for faction_ent in &sf.0 {
+                let Ok(faction) = factions.get(*faction_ent) else {
+                    error!("Entity in faction list does not exist");
                     continue;
                 };
-                dbg!(faction_name);
+                dbg!(faction);
             }
         }
     }

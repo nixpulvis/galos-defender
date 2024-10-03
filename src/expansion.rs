@@ -1,9 +1,6 @@
-use std::collections::HashSet;
+use crate::system::{Factions, Position, System};
 use bevy::prelude::*;
-use crate::{
-    Name,
-    system::{System, Position, Factions},
-};
+use std::collections::HashSet;
 
 #[derive(Event)]
 pub(crate) struct Expand {
@@ -13,19 +10,20 @@ pub(crate) struct Expand {
 
 pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
-    mut target_system_query: Query<(Entity, &Name, Option<&mut Factions>)>,
+    mut target_system_query: Query<(Entity, &System, Option<&mut Factions>)>,
     mut commands: Commands,
 ) {
     for event in ev_r.read() {
         println!("Processing Expand event");
-        let Ok((entity, name, faction_list)) = target_system_query.get_mut(event.system) else {
+        let Ok((entity, system, faction_list)) = target_system_query.get_mut(event.system) else {
+            error!("System in expansion event does not exist");
             continue;
         };
         if let Some(mut fl) = faction_list {
-            println!("pushing {}", &name.0);
+            info!("pushing {}", system.name);
             fl.0.insert(event.faction);
         } else {
-            println!("inserting {}", &name.0);
+            info!("inserting {}", system.name);
             commands
                 .entity(entity)
                 .insert(Factions(HashSet::from([event.faction])));
@@ -35,7 +33,7 @@ pub(crate) fn expand(
 
 pub(crate) fn check_expansion(
     mut ev_w: EventWriter<Expand>,
-    system_query: Query<(Entity, &Name, &Position, Option<&Factions>), With<System>>,
+    system_query: Query<(Entity, &System, &Position, Option<&Factions>), With<System>>,
 ) {
     // do some additional queries on the entity lists to determine which factions should
     // expand, and where. in this example, all factions expand to all neighbors
@@ -47,7 +45,10 @@ pub(crate) fn check_expansion(
             if position_a.0.distance(position_b.0) < 20. {
                 if let Some(factions_a) = factions_a {
                     for faction in factions_a.0.clone() {
-                        println!("Sending Expand event from {} to {}", name_a.0, name_b.0);
+                        info!(
+                            "Sending Expand event from {} to {}",
+                            name_a.name, name_b.name
+                        );
                         ev_w.send(Expand {
                             faction,
                             system: system_b,

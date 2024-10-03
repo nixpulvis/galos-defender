@@ -1,15 +1,10 @@
-use std::collections::HashSet;
-use crate::Name;
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 #[derive(Component, Debug)]
-pub(crate) struct Faction;
+pub(crate) struct Faction {
+    pub name: String,
+}
 
 #[derive(Component, Debug)]
 pub(crate) struct Systems(pub HashSet<Entity>);
-
-#[derive(Bundle, Debug)]
-pub(crate) struct FactionBundle {
-    pub faction: Faction,
-    pub name: Name,
-}
