@@ -11,8 +11,8 @@ pub(crate) const EXPANSION_INFLUENCE_THRESHOLD: f32 = 0.75;
 
 #[derive(Event)]
 pub(crate) struct Expand {
-    faction: Entity,
-    system: Entity,
+    source_system_faction: Entity,
+    destination_system: Entity,
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -27,32 +27,48 @@ pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
     systems: Query<&System>,
     factions: Query<&Faction>,
-    system_factions: Query<&SystemFaction>,
+    mut system_factions: Query<&mut SystemFaction>,
     mut commands: Commands,
 ) {
     for event in ev_r.read() {
         info!("Processing Expand event");
-        let Ok(_system) = systems.get(event.system) else {
-            error!("System in expansion event does not exist");
+        let Ok(src) = system_factions.get(event.source_system_faction) else {
+            error!("Source system faction in expansion event does not exist");
             continue;
         };
 
-        let Ok(_faction) = factions.get(event.faction) else {
-            error!("Faction in expansion event does not exist");
+        let Ok(_src_sys) = systems.get(src.system) else {
+            error!("Source system in expansion event does not exist");
+            continue;
+        };
+
+        let Ok(_src_fac) = factions.get(src.faction) else {
+            error!("Source faction in expansion event does not exist");
+            continue;
+        };
+
+        let Ok(_dst_sys) = systems.get(event.destination_system) else {
+            error!("Destination system in expansion event does not exist");
             continue;
         };
 
         let new_sys_faction = SystemFaction {
-            system: event.system,
-            faction: event.faction,
+            system: event.destination_system,
+            faction: src.faction,
             influence: EXPANSION_INFLUENCE,
             state: None,
         };
+
         let all_system_factions = system_factions.iter().collect::<HashSet<&SystemFaction>>();
         if all_system_factions.contains(&&new_sys_faction) {
             return;
         }
 
+        let Ok(mut src) = system_factions.get_mut(event.source_system_faction) else {
+            error!("Source system faction in expansion event does not exist");
+            continue;
+        };
+        src.influence -= EXPANSION_INFLUENCE;
         commands.spawn(new_sys_faction);
     }
 }
@@ -61,9 +77,9 @@ pub(crate) fn check_expansion(
     mut ev_w: EventWriter<Expand>,
     systems: Query<(Entity, &System, &Position)>,
     factions: Query<&Faction>,
-    system_factions: Query<&SystemFaction>,
+    system_factions: Query<(Entity, &SystemFaction)>,
 ) {
-    for system_faction in &system_factions {
+    for (entity, system_faction) in &system_factions {
         if system_faction.influence >= EXPANSION_INFLUENCE_THRESHOLD {
             let (src_system_id, src_system, src_position) =
                 systems.get(system_faction.system).expect("missing system");
@@ -87,8 +103,8 @@ pub(crate) fn check_expansion(
                         src_system.name, dst_system.name
                     );
                     ev_w.send(Expand {
-                        system: dst_system_id,
-                        faction: system_faction.faction,
+                        source_system_faction: entity,
+                        destination_system: dst_system_id,
                     });
 
                     // TODO: Only expand to the closest system.
