@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+// TODO: OPT: impl Hash for faster comparisons than .contains() in expand system
+
 #[derive(Component, Debug)]
 pub(crate) struct SystemFaction {
     pub system: Entity,
