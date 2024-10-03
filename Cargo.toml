@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 bevy = "*"
+clap = { version = "*", features = ["derive"] }
+serde_json = "*"

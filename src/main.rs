@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use clap::Parser;
+use std::path::PathBuf;
 
 mod faction;
 use faction::*;
@@ -9,68 +11,36 @@ use system::{System, *};
 mod system_faction;
 use system_faction::SystemFaction;
 
+mod spawn;
+use spawn::*;
+
 mod expansion;
 use expansion::*;
 
-fn main() {
-    App::new()
-        // .add_plugins(DefaultPlugins)
-        .add_systems(Startup, spawn)
-        .add_systems(
-            Update,
-            (expansion::check_expansion, expansion::expand, query).chain(),
-        )
-        .add_event::<Expand>()
-        .run();
+#[derive(Parser, Resource, Debug)]
+#[command(version, about)]
+pub(crate) struct Args {
+    spawn_data: Option<PathBuf>,
 }
 
-fn spawn(mut commands: Commands) {
-    // Create a new faction for us while developing.
-    let our_faction = commands
-        .spawn((Faction {
-            name: "The Power of Nates".into(),
-        },))
-        .id();
+fn main() {
+    let args = Args::parse();
 
-    let our_home = commands
-        .spawn((
-            System {
-                address: 0,
-                name: "SOL".into(),
-            },
-            Position(Vec3::splat(0.)),
-        ))
-        .id();
+    let mut app = App::new();
+    // app.add_plugins(DefaultPlugins);
 
-    // Create a presense of our faction in our home system.
-    let _sf = commands
-        .spawn(SystemFaction {
-            system: our_home,
-            faction: our_faction,
-            influence: 79.,
-            state: None,
-        })
-        .id();
+    if args.spawn_data.is_some() {
+        app.add_systems(Startup, spawn_data);
+    } else {
+        app.add_systems(Startup, spawn_manual);
+    }
+    app.insert_resource(args);
 
-    let _neighbor = commands
-        .spawn((
-            System {
-                address: 1,
-                name: "ALPHA CENTAURI".into(),
-            },
-            Position(Vec3::new(3.03125, -0.09375, 3.15625)),
-        ))
-        .id();
+    app.add_plugins(expansion::plugin);
 
-    let _not_neighbor = commands
-        .spawn((
-            System {
-                address: 2,
-                name: "G 139-21".into(),
-            },
-            Position(Vec3::new(-17.03125, 16.875, 34.625)),
-        ))
-        .id();
+    app.add_systems(Update, query.after(Expansion));
+
+    app.run();
 }
 
 fn query(
@@ -83,23 +53,11 @@ fn query(
         let faction = factions
             .get(system_faction.faction)
             .expect("missing faction");
-        println!(
-            "{} in {} with {} influence.",
-            &faction.name, &system.name, system_faction.influence
-        );
+        print!(
+            "{} @ {}", &faction.name, &system.name);
+        if let Some(state) = &system_faction.state {
+            print!(" in state {}", state);
+        }
+        println!(" with {} influence.", system_faction.influence);
     }
 }
-// fn query(systems: Query<(&System, Option<&Factions>)>, factions: Query<&Faction>) {
-//     for (system, system_factions) in &systems {
-//         dbg!(system);
-//         if let Some(sf) = system_factions {
-//             for faction_ent in &sf.0 {
-//                 let Ok(faction) = factions.get(*faction_ent) else {
-//                     error!("Entity in faction list does not exist");
-//                     continue;
-//                 };
-//                 dbg!(faction);
-//             }
-//         }
-//     }
-// }

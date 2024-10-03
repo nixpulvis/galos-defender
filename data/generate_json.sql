@@ -1,6 +1,6 @@
 SELECT json_agg(t) FROM (
 
-SELECT DISTINCT system_factions.*
+SELECT DISTINCT systems.*
 FROM systems
 JOIN system_factions ON systems.address = system_factions.system_address
 JOIN factions ON system_factions.faction_id = factions.id

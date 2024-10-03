@@ -11,6 +11,14 @@ pub(crate) struct Expand {
     system: Entity,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct Expansion;
+
+pub(crate) fn plugin(app: &mut App) {
+    app.add_event::<Expand>();
+    app.add_systems(Update, (check_expansion, expand).chain().in_set(Expansion));
+}
+
 pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
     mut systems: Query<&System>,
