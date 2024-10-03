@@ -1,6 +1,9 @@
-use crate::system::{Factions, Position, System};
+use crate::{
+    system::{Position, System},
+    system_faction::SystemFaction,
+    Faction,
+};
 use bevy::prelude::*;
-use std::collections::HashSet;
 
 #[derive(Event)]
 pub(crate) struct Expand {
@@ -10,50 +13,67 @@ pub(crate) struct Expand {
 
 pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
-    mut target_system_query: Query<(Entity, &System, Option<&mut Factions>)>,
+    mut systems: Query<&System>,
+    mut factions: Query<&Faction>,
     mut commands: Commands,
 ) {
     for event in ev_r.read() {
-        println!("Processing Expand event");
-        let Ok((entity, system, faction_list)) = target_system_query.get_mut(event.system) else {
+        info!("Processing Expand event");
+        let Ok(_system) = systems.get_mut(event.system) else {
             error!("System in expansion event does not exist");
             continue;
         };
-        if let Some(mut fl) = faction_list {
-            info!("pushing {}", system.name);
-            fl.0.insert(event.faction);
-        } else {
-            info!("inserting {}", system.name);
-            commands
-                .entity(entity)
-                .insert(Factions(HashSet::from([event.faction])));
-        }
+
+        let Ok(_faction) = factions.get_mut(event.faction) else {
+            error!("Faction in expansion event does not exist");
+            continue;
+        };
+
+        // TODO: Check that the expansion target doesn't already have a system faction for
+        // this faction.
+
+        commands.spawn(SystemFaction {
+            system: event.system,
+            faction: event.faction,
+            influence: 25.,
+            state: None,
+        });
     }
 }
 
 pub(crate) fn check_expansion(
     mut ev_w: EventWriter<Expand>,
-    system_query: Query<(Entity, &System, &Position, Option<&Factions>), With<System>>,
+    systems: Query<(Entity, &System, &Position)>,
+    factions: Query<&Faction>,
+    system_factions: Query<&SystemFaction>,
 ) {
-    // do some additional queries on the entity lists to determine which factions should
-    // expand, and where. in this example, all factions expand to all neighbors
-    for (system_a, name_a, position_a, factions_a) in &system_query {
-        for (system_b, name_b, position_b, factions_b) in &system_query {
-            if system_a == system_b {
-                continue;
-            }
-            if position_a.0.distance(position_b.0) < 20. {
-                if let Some(factions_a) = factions_a {
-                    for faction in factions_a.0.clone() {
-                        info!(
-                            "Sending Expand event from {} to {}",
-                            name_a.name, name_b.name
-                        );
-                        ev_w.send(Expand {
-                            faction,
-                            system: system_b,
-                        });
-                    }
+    for system_faction in &system_factions {
+        if system_faction.influence >= 75. {
+            let (src_system_id, src_system, src_position) =
+                systems.get(system_faction.system).expect("missing system");
+            let faction = factions
+                .get(system_faction.faction)
+                .expect("missing faction");
+            info!(
+                "{} in {} ready for expansion",
+                faction.name, src_system.name
+            );
+            for (dst_system_id, dst_system, dst_position) in &systems {
+                if src_system_id == dst_system_id {
+                    continue;
+                }
+
+                // TODO: Check more conditions, like faction count, war state, etc.
+                // TODO: Check within 20Ly cube around src.
+                if src_position.0.distance(dst_position.0) < 20. {
+                    info!(
+                        "Sending Expand event from {} to {}",
+                        src_system.name, dst_system.name
+                    );
+                    ev_w.send(Expand {
+                        system: dst_system_id,
+                        faction: system_faction.faction,
+                    });
                 }
             }
         }
