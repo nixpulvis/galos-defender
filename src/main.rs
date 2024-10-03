@@ -1,57 +1,28 @@
-use bevy::{prelude::*, utils::dbg};
-use std::collections::{hash_set, HashSet};
+use std::collections::HashSet;
+use bevy::prelude::*;
 
-fn main() {
-    let mut app = App::new()
-        // .add_plugins(DefaultPlugins)
-        .add_systems(Startup, spawn)
-        .add_systems(Update, (check_expansion, expand, query).chain())
-        .add_event::<Expand>()
-        .run();
-}
+mod faction;
+use self::faction::*;
 
-#[derive(Component, Debug)]
-struct Faction;
+mod system;
+use self::system::{*, System};
 
-#[derive(Component, Debug)]
-struct System;
+mod expansion;
+use self::expansion::*;
 
 #[derive(Component, Debug)]
 struct Name(String);
 
-#[derive(Component, Debug)]
-struct Neighbors(HashSet<Entity>);
-
-#[derive(Component, Debug)]
-struct Systems(HashSet<Entity>);
-
-#[derive(Component, Debug)]
-struct Factions(HashSet<Entity>);
-
-#[derive(Component, Debug)]
-struct Address(u32);
-
-#[derive(Component, Debug)]
-struct Position(Vec3);
-
-#[derive(Bundle, Debug)]
-struct FactionBundle {
-    faction: Faction,
-    name: Name,
-}
-
-#[derive(Bundle, Debug)]
-struct SystemBundle {
-    system: System,
-    address: Address,
-    name: Name,
-    position: Position,
-}
-
-#[derive(Event)]
-struct Expand {
-    faction: Entity,
-    system: Entity,
+fn main() {
+    App::new()
+        // .add_plugins(DefaultPlugins)
+        .add_systems(Startup, spawn)
+        .add_systems(
+            Update,
+            (expansion::check_expansion, expansion::expand, query).chain(),
+        )
+        .add_event::<Expand>()
+        .run();
 }
 
 fn spawn(mut commands: Commands) {
@@ -109,54 +80,6 @@ fn query(
                     continue;
                 };
                 dbg!(faction_name);
-            }
-        }
-    }
-}
-
-fn expand(
-    mut ev_r: EventReader<Expand>,
-    mut target_system_query: Query<(Entity, &Name, Option<&mut Factions>)>,
-    mut commands: Commands,
-) {
-    for event in ev_r.read() {
-        println!("Processing Expand event");
-        let Ok((entity, name, faction_list)) = target_system_query.get_mut(event.system) else {
-            continue;
-        };
-        if let Some(mut fl) = faction_list {
-            println!("pushing {}", &name.0);
-            fl.0.insert(event.faction);
-        } else {
-            println!("inserting {}", &name.0);
-            commands
-                .entity(entity)
-                .insert(Factions(HashSet::from([event.faction])));
-        }
-    }
-}
-
-fn check_expansion(
-    mut ev_w: EventWriter<Expand>,
-    system_query: Query<(Entity, &Name, &Position, Option<&Factions>), With<System>>,
-) {
-    // do some additional queries on the entity lists to determine which factions should
-    // expand, and where. in this example, all factions expand to all neighbors
-    for (system_a, name_a, position_a, factions_a) in &system_query {
-        for (system_b, name_b, position_b, factions_b) in &system_query {
-            if system_a == system_b {
-                continue;
-            }
-            if position_a.0.distance(position_b.0) < 20. {
-                if let Some(factions_a) = factions_a {
-                    for faction in factions_a.0.clone() {
-                        println!("Sending Expand event from {} to {}", name_a.0, name_b.0);
-                        ev_w.send(Expand {
-                            faction,
-                            system: system_b,
-                        });
-                    }
-                }
             }
         }
     }
