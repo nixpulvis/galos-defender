@@ -2,8 +2,6 @@ use std::hash::Hash;
 
 use bevy::prelude::*;
 
-// TODO: OPT: impl Hash for faster comparisons than .contains() in expand system
-
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SystemFaction {
     pub system: Entity,
