@@ -7,3 +7,9 @@ pub(crate) struct SystemFaction {
     pub influence: f32,
     pub state: Option<String>,
 }
+
+impl PartialEq for SystemFaction {
+    fn eq(&self, other: &Self) -> bool {
+        (self.system == other.system) && (self.faction == other.faction)
+    }
+}

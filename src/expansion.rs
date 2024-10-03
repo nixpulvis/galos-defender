@@ -13,31 +13,35 @@ pub(crate) struct Expand {
 
 pub(crate) fn expand(
     mut ev_r: EventReader<Expand>,
-    mut systems: Query<&System>,
-    mut factions: Query<&Faction>,
+    systems: Query<&System>,
+    factions: Query<&Faction>,
+    system_factions: Query<&SystemFaction>,
     mut commands: Commands,
 ) {
     for event in ev_r.read() {
         info!("Processing Expand event");
-        let Ok(_system) = systems.get_mut(event.system) else {
+        let Ok(_system) = systems.get(event.system) else {
             error!("System in expansion event does not exist");
             continue;
         };
 
-        let Ok(_faction) = factions.get_mut(event.faction) else {
+        let Ok(_faction) = factions.get(event.faction) else {
             error!("Faction in expansion event does not exist");
             continue;
         };
 
-        // TODO: Check that the expansion target doesn't already have a system faction for
-        // this faction.
-
-        commands.spawn(SystemFaction {
+        let new_sys_faction = SystemFaction {
             system: event.system,
             faction: event.faction,
             influence: 25.,
             state: None,
-        });
+        };
+        let all_system_factions = system_factions.iter().collect::<Vec<&SystemFaction>>();
+        if all_system_factions.contains(&&new_sys_faction) {
+            return;
+        }
+
+        commands.spawn(new_sys_faction);
     }
 }
 
