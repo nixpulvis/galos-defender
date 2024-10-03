@@ -56,7 +56,7 @@ pub(crate) fn check_expansion(
     system_factions: Query<&SystemFaction>,
 ) {
     for system_faction in &system_factions {
-        if system_faction.influence >= 75. {
+        if system_faction.influence >= 0.75 {
             let (src_system_id, src_system, src_position) =
                 systems.get(system_faction.system).expect("missing system");
             let faction = factions
@@ -82,6 +82,9 @@ pub(crate) fn check_expansion(
                         system: dst_system_id,
                         faction: system_faction.faction,
                     });
+
+                    // TODO: Only expand to the closest system.
+                    break;
                 }
             }
         }

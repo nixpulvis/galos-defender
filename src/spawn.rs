@@ -149,7 +149,7 @@ pub(crate) fn spawn_manual(mut commands: Commands) {
         .spawn(SystemFaction {
             system: our_home,
             faction: our_faction,
-            influence: 79.,
+            influence: 0.79,
             state: None,
         })
         .id();
