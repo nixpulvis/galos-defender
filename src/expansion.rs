@@ -101,9 +101,15 @@ pub(crate) fn check_expansion(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::SystemBundle;
 
-    use super::*;
+    fn app_setup() -> App {
+        let mut app = App::new();
+        app.add_event::<Expand>();
+        app.add_systems(Update, (check_expansion, expand).chain());
+        app
+    }
 
     fn entity_setup(world: &mut World, sf_inf: f32, s2_pos: Vec3) {
         let system_1 = world
@@ -139,17 +145,19 @@ mod tests {
 
     #[test]
     fn successful_expansion() {
-        // Setup app
-        let mut app = App::new();
-
-        app.add_event::<Expand>();
-
-        app.add_systems(Update, (check_expansion, expand).chain());
+        let mut app = app_setup();
 
         entity_setup(app.world_mut(), 1., Vec3::new(1., 1., 1.));
 
+        // Double check we only have one system faction.
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+
         // Run systems
-        app.update();
         app.update();
 
         // Check resulting changes
@@ -163,17 +171,11 @@ mod tests {
 
     #[test]
     fn no_expansion_low_influence() {
-        // Setup app
-        let mut app = App::new();
-
-        app.add_event::<Expand>();
-
-        app.add_systems(Update, (check_expansion, expand).chain());
+        let mut app = app_setup();
 
         entity_setup(app.world_mut(), 0.1, Vec3::new(1., 1., 1.));
 
         // Run systems
-        app.update();
         app.update();
 
         // Check resulting changes
@@ -187,17 +189,11 @@ mod tests {
 
     #[test]
     fn no_expansion_too_far() {
-        // Setup app
-        let mut app = App::new();
-
-        app.add_event::<Expand>();
-
-        app.add_systems(Update, (check_expansion, expand).chain());
+        let mut app = app_setup();
 
         entity_setup(app.world_mut(), 1., Vec3::new(99999., 99999., 99999.));
 
         // Run systems
-        app.update();
         app.update();
 
         // Check resulting changes
