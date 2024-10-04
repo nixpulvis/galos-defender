@@ -105,6 +105,38 @@ mod tests {
 
     use super::*;
 
+    fn entity_setup(world: &mut World, sf_inf: f32, s2_pos: Vec3) {
+        let system_1 = world
+            .spawn(SystemBundle {
+                system: System {
+                    address: 0,
+                    name: "System1".into(),
+                },
+                position: Position(Vec3::new(0., 0., 0.)),
+            })
+            .id();
+        let our_faction = world
+            .spawn(Faction {
+                name: "Our Faction".into(),
+            })
+            .id();
+
+        world.spawn(SystemFaction {
+            system: system_1,
+            faction: our_faction,
+            influence: sf_inf,
+            state: None,
+        });
+
+        world.spawn(SystemBundle {
+            system: System {
+                address: 0,
+                name: "System2".into(),
+            },
+            position: Position(s2_pos),
+        });
+    }
+
     #[test]
     fn successful_expansion() {
         // Setup app
@@ -114,38 +146,7 @@ mod tests {
 
         app.add_systems(Update, (check_expansion, expand).chain());
 
-        // Setup test entities
-        let system_1 = app
-            .world_mut()
-            .spawn(SystemBundle {
-                system: System {
-                    address: 0,
-                    name: "System1".into(),
-                },
-                position: Position(Vec3::new(0., 0., 0.)),
-            })
-            .id();
-        let our_faction = app
-            .world_mut()
-            .spawn(Faction {
-                name: "Our Faction".into(),
-            })
-            .id();
-
-        app.world_mut().spawn(SystemFaction {
-            system: system_1,
-            faction: our_faction,
-            influence: 1.,
-            state: None,
-        });
-
-        app.world_mut().spawn(SystemBundle {
-            system: System {
-                address: 0,
-                name: "System2".into(),
-            },
-            position: Position(Vec3::new(1., 1., 1.)),
-        });
+        entity_setup(app.world_mut(), 1., Vec3::new(1., 1., 1.));
 
         // Run systems
         app.update();
@@ -169,38 +170,7 @@ mod tests {
 
         app.add_systems(Update, (check_expansion, expand).chain());
 
-        // Setup test entities
-        let system_1 = app
-            .world_mut()
-            .spawn(SystemBundle {
-                system: System {
-                    address: 0,
-                    name: "System1".into(),
-                },
-                position: Position(Vec3::new(0., 0., 0.)),
-            })
-            .id();
-        let our_faction = app
-            .world_mut()
-            .spawn(Faction {
-                name: "Our Faction".into(),
-            })
-            .id();
-
-        app.world_mut().spawn(SystemFaction {
-            system: system_1,
-            faction: our_faction,
-            influence: 0.,
-            state: None,
-        });
-
-        app.world_mut().spawn(SystemBundle {
-            system: System {
-                address: 0,
-                name: "System2".into(),
-            },
-            position: Position(Vec3::new(1., 1., 1.)),
-        });
+        entity_setup(app.world_mut(), 0.1, Vec3::new(1., 1., 1.));
 
         // Run systems
         app.update();
@@ -224,38 +194,7 @@ mod tests {
 
         app.add_systems(Update, (check_expansion, expand).chain());
 
-        // Setup test entities
-        let system_1 = app
-            .world_mut()
-            .spawn(SystemBundle {
-                system: System {
-                    address: 0,
-                    name: "System1".into(),
-                },
-                position: Position(Vec3::new(0., 0., 0.)),
-            })
-            .id();
-        let our_faction = app
-            .world_mut()
-            .spawn(Faction {
-                name: "Our Faction".into(),
-            })
-            .id();
-
-        app.world_mut().spawn(SystemFaction {
-            system: system_1,
-            faction: our_faction,
-            influence: 1.,
-            state: None,
-        });
-
-        app.world_mut().spawn(SystemBundle {
-            system: System {
-                address: 0,
-                name: "System2".into(),
-            },
-            position: Position(Vec3::new(99999., 99999., 99999.)),
-        });
+        entity_setup(app.world_mut(), 1., Vec3::new(99999., 99999., 99999.));
 
         // Run systems
         app.update();
