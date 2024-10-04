@@ -98,3 +98,175 @@ pub(crate) fn check_expansion(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::SystemBundle;
+
+    use super::*;
+
+    #[test]
+    fn successful_expansion() {
+        // Setup app
+        let mut app = App::new();
+
+        app.add_event::<Expand>();
+
+        app.add_systems(Update, (check_expansion, expand).chain());
+
+        // Setup test entities
+        let system_1 = app
+            .world_mut()
+            .spawn(SystemBundle {
+                system: System {
+                    address: 0,
+                    name: "System1".into(),
+                },
+                position: Position(Vec3::new(0., 0., 0.)),
+            })
+            .id();
+        let our_faction = app
+            .world_mut()
+            .spawn(Faction {
+                name: "Our Faction".into(),
+            })
+            .id();
+
+        app.world_mut().spawn(SystemFaction {
+            system: system_1,
+            faction: our_faction,
+            influence: 1.,
+            state: None,
+        });
+
+        app.world_mut().spawn(SystemBundle {
+            system: System {
+                address: 0,
+                name: "System2".into(),
+            },
+            position: Position(Vec3::new(1., 1., 1.)),
+        });
+
+        // Run systems
+        app.update();
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 2);
+    }
+
+    #[test]
+    fn no_expansion_low_influence() {
+        // Setup app
+        let mut app = App::new();
+
+        app.add_event::<Expand>();
+
+        app.add_systems(Update, (check_expansion, expand).chain());
+
+        // Setup test entities
+        let system_1 = app
+            .world_mut()
+            .spawn(SystemBundle {
+                system: System {
+                    address: 0,
+                    name: "System1".into(),
+                },
+                position: Position(Vec3::new(0., 0., 0.)),
+            })
+            .id();
+        let our_faction = app
+            .world_mut()
+            .spawn(Faction {
+                name: "Our Faction".into(),
+            })
+            .id();
+
+        app.world_mut().spawn(SystemFaction {
+            system: system_1,
+            faction: our_faction,
+            influence: 0.,
+            state: None,
+        });
+
+        app.world_mut().spawn(SystemBundle {
+            system: System {
+                address: 0,
+                name: "System2".into(),
+            },
+            position: Position(Vec3::new(1., 1., 1.)),
+        });
+
+        // Run systems
+        app.update();
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+    }
+
+    #[test]
+    fn no_expansion_too_far() {
+        // Setup app
+        let mut app = App::new();
+
+        app.add_event::<Expand>();
+
+        app.add_systems(Update, (check_expansion, expand).chain());
+
+        // Setup test entities
+        let system_1 = app
+            .world_mut()
+            .spawn(SystemBundle {
+                system: System {
+                    address: 0,
+                    name: "System1".into(),
+                },
+                position: Position(Vec3::new(0., 0., 0.)),
+            })
+            .id();
+        let our_faction = app
+            .world_mut()
+            .spawn(Faction {
+                name: "Our Faction".into(),
+            })
+            .id();
+
+        app.world_mut().spawn(SystemFaction {
+            system: system_1,
+            faction: our_faction,
+            influence: 1.,
+            state: None,
+        });
+
+        app.world_mut().spawn(SystemBundle {
+            system: System {
+                address: 0,
+                name: "System2".into(),
+            },
+            position: Position(Vec3::new(99999., 99999., 99999.)),
+        });
+
+        // Run systems
+        app.update();
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+    }
+}
