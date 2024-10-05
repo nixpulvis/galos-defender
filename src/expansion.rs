@@ -60,7 +60,7 @@ pub(crate) fn expand(
         };
 
         let all_system_factions = system_factions.iter().collect::<HashSet<&SystemFaction>>();
-        if all_system_factions.contains(&&new_sys_faction) {
+        if all_system_factions.contains(&new_sys_faction) {
             return;
         }
 
