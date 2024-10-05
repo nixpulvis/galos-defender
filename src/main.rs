@@ -1,4 +1,10 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::{
+        settings::{Backends, WgpuSettings},
+        RenderPlugin,
+    },
+};
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -6,7 +12,7 @@ mod faction;
 use faction::*;
 
 mod system;
-use system::{System, *};
+use system::System;
 
 mod system_faction;
 use system_faction::SystemFaction;
@@ -27,7 +33,13 @@ fn main() {
     let args = Args::parse();
 
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins);
+    app.add_plugins(DefaultPlugins.set(RenderPlugin {
+        render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
+            backends: Some(Backends::VULKAN),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }));
 
     if args.spawn_data.is_some() {
         app.add_systems(Startup, spawn_data);
@@ -35,11 +47,14 @@ fn main() {
         app.add_systems(Startup, spawn_manual);
     }
     app.insert_resource(args);
-    app.insert_resource(InfluenceTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
+    app.insert_resource(InfluenceTimer(Timer::from_seconds(
+        1.0,
+        TimerMode::Repeating,
+    )));
 
     app.add_plugins(expansion::plugin);
 
-    // app.add_systems(Update, tick.before(Expansion));
+    app.add_systems(Update, tick.before(Expansion));
     // app.add_systems(Update, query.after(Expansion));
 
     app.run();
@@ -61,13 +76,16 @@ fn tick(
         for mut system_faction in &mut system_factions {
             let system = systems.get(system_faction.system).expect("no system");
             let faction = factions.get(system_faction.faction).expect("no faction");
-            system_faction.influence += 0.1;
-            println!("ticking {} @ {} to {}", faction.name, system.name, system_faction.influence);
+            system_faction.influence += 0.025;
+            println!(
+                "ticking {} @ {} to {}",
+                faction.name, system.name, system_faction.influence
+            );
         }
     }
 }
 
-fn query(
+fn _query(
     systems: Query<&System>,
     factions: Query<&Faction>,
     system_factions: Query<&SystemFaction>,
@@ -77,8 +95,7 @@ fn query(
         let faction = factions
             .get(system_faction.faction)
             .expect("missing faction");
-        print!(
-            "{} @ {}", &faction.name, &system.name);
+        print!("{} @ {}", &faction.name, &system.name);
         if let Some(state) = &system_faction.state {
             print!(" in state {}", state);
         }
