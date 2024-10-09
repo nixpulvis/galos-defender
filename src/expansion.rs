@@ -114,3 +114,110 @@ pub(crate) fn check_expansion(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SystemBundle;
+
+    fn app_setup() -> App {
+        let mut app = App::new();
+        app.add_event::<Expand>();
+        app.add_systems(Update, (check_expansion, expand).chain());
+        app
+    }
+
+    fn entity_setup(world: &mut World, sf_inf: f32, s2_pos: Vec3) {
+        let system_1 = world
+            .spawn(SystemBundle {
+                system: System {
+                    address: 0,
+                    name: "System1".into(),
+                },
+                position: Position(Vec3::new(0., 0., 0.)),
+            })
+            .id();
+        let our_faction = world
+            .spawn(Faction {
+                name: "Our Faction".into(),
+            })
+            .id();
+
+        world.spawn(SystemFaction {
+            system: system_1,
+            faction: our_faction,
+            influence: sf_inf,
+            state: None,
+        });
+
+        world.spawn(SystemBundle {
+            system: System {
+                address: 0,
+                name: "System2".into(),
+            },
+            position: Position(s2_pos),
+        });
+    }
+
+    #[test]
+    fn successful_expansion() {
+        let mut app = app_setup();
+
+        entity_setup(app.world_mut(), 1., Vec3::new(1., 1., 1.));
+
+        // Double check we only have one system faction.
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+
+        // Run systems
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 2);
+    }
+
+    #[test]
+    fn no_expansion_low_influence() {
+        let mut app = app_setup();
+
+        entity_setup(app.world_mut(), 0.1, Vec3::new(1., 1., 1.));
+
+        // Run systems
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+    }
+
+    #[test]
+    fn no_expansion_too_far() {
+        let mut app = app_setup();
+
+        entity_setup(app.world_mut(), 1., Vec3::new(99999., 99999., 99999.));
+
+        // Run systems
+        app.update();
+
+        // Check resulting changes
+        let system_factions = app
+            .world_mut()
+            .query::<&SystemFaction>()
+            .iter(app.world())
+            .collect::<Vec<&SystemFaction>>();
+        assert_eq!(system_factions.len(), 1);
+    }
+}

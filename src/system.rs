@@ -1,5 +1,11 @@
 use bevy::prelude::*;
 
+#[derive(Bundle, Debug)]
+pub(crate) struct SystemBundle {
+    pub system: System,
+    pub position: Position,
+}
+
 #[derive(Component, Debug)]
 pub(crate) struct System {
     pub name: String,
